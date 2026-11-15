@@ -162,6 +162,26 @@
   }
   .ghost:hover { background: rgba(255, 255, 255, 0.06); }
 
+  /* locked state */
+  .btn[aria-disabled="true"] {
+    background: rgba(255, 255, 255, 0.055);
+    color: #7a7595;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn[aria-disabled="true"]:hover { transform: none; box-shadow: none; }
+
+  .lock-note {
+    margin-top: 16px;
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    color: #6f6b8a;
+    min-height: 1.2em;
+  }
+  .lock-note.unlocked { color: #7ee0c0; }
+
   /* countdown */
   .countdown {
     margin-top: 56px;
@@ -225,7 +245,7 @@
   </header>
 
   <main>
-    <div class="badge">Sealed until January 1, 2030</div>
+    <div class="badge">Sealed until November 16, 2030</div>
 
     <h1>Send a message <span class="year">to 2030.</span></h1>
 
@@ -236,8 +256,10 @@
 
     <div class="cta" id="enter">
       <!-- Replace the href below with the real destination URL -->
-      <a class="btn primary" href="https://example.com" target="_blank" rel="noopener">Enter the capsule →</a>
+      <a id="enterBtn" class="btn primary" href="https://example.com" target="_blank"
+         rel="noopener" aria-disabled="true" tabindex="-1">Locked · opens November 16, 2030</a>
     </div>
+    <div class="lock-note" id="lockNote">This capsule stays sealed until November 16, 2030.</div>
 
     <div class="countdown" aria-label="Time remaining until 2030">
       <div class="unit"><span class="num" id="d">—</span><span class="label">Days</span></div>
@@ -248,11 +270,27 @@
   </main>
 
   <footer id="about">
-    Time remaining until 01.01.2030 &nbsp;·&nbsp; 2030 Time Capsule
+    Time remaining until 16.11.2030 &nbsp;·&nbsp; 2030 Time Capsule
   </footer>
 
 <script>
-  const target = new Date("2030-01-01T00:00:00Z");
+  // November 16, 2030, 00:00 Maldives time (UTC+5) = 19:00 UTC on Nov 15
+  const target = new Date("2030-11-15T19:00:00Z");
+  const btn = document.getElementById("enterBtn");
+  const note = document.getElementById("lockNote");
+  const badge = document.querySelector(".badge");
+  let unlocked = false;
+
+  function unlock() {
+    unlocked = true;
+    btn.removeAttribute("aria-disabled");
+    btn.removeAttribute("tabindex");
+    btn.classList.remove("ghost");
+    btn.textContent = "Enter the capsule →";
+    note.textContent = "The capsule is open.";
+    note.classList.add("unlocked");
+    badge.textContent = "Open now — the capsule is unlocked";
+  }
 
   function tick() {
     const diff = target - new Date();
@@ -261,11 +299,34 @@
     const hrs = Math.floor(diff / 3600000) % 24;
     const mins = Math.floor(diff / 60000) % 60;
     const secs = Math.floor(diff / 1000) % 60;
+
     document.getElementById("d").textContent = Math.max(0, days);
     document.getElementById("h").textContent = clamp(hrs);
     document.getElementById("m").textContent = clamp(mins);
     document.getElementById("s").textContent = clamp(secs);
+
+    if (diff <= 0 && !unlocked) {
+      unlock();
+      return;
+    }
+
+    if (!unlocked) {
+      btn.textContent = days > 0
+        ? `Locked · opens in ${days} days`
+        : "Locked · opens November 16, 2030";
+    }
   }
+
+  // Block the click while sealed, whatever the browser tries
+  btn.addEventListener("click", (e) => {
+    if (!unlocked) {
+      e.preventDefault();
+      note.textContent = "Not yet — the capsule opens on November 16, 2030.";
+      note.classList.remove("unlocked");
+      note.style.color = "#ff9aa8";
+      setTimeout(() => { note.style.color = ""; }, 1600);
+    }
+  });
 
   tick();
   setInterval(tick, 1000);
